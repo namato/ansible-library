@@ -14,6 +14,7 @@ def main():
 		replication = dict(default="3", choices=map(str, [1,2,3,4,5,6])),
 		minreplication = dict(default="2", choices=map(str, [1,2,3,4,5,6])),
 		createparent = dict(default=False, required=False),
+		localvolumehost = dict(required=False),
 		username = dict(default='mapr'),
 		password = dict(default='mapr'),
 		mapr_webserver = dict(required=True),
@@ -43,6 +44,10 @@ def mapr_volume(module):
 			"minreplication": module.params["minreplication"],
 			"createparent": module.params["createparent"]
 		}
+
+		if "localvolumehost" in module.params:
+			params.update({"localvolumehost": module.params["localvolumehost"]})
+
 		if len(info["volumes"]) > 0:
 			# XXX: could add a comparison of the info object and the params
 			# XXX: to provide a modify capability.
