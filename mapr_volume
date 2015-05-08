@@ -1,0 +1,110 @@
+#!/usr/bin/env python
+
+import datetime
+import json
+import requests
+
+def main():
+	global module
+	module = AnsibleModule(
+	    argument_spec = dict(
+		state = dict(default='present', choices=['present', 'absent', 'mounted', 'unmounted']),
+		name = dict(required=True),
+		path = dict(required=False),
+		replication = dict(default="3", choices=map(str, [1,2,3,4,5,6])),
+		minreplication = dict(default="2", choices=map(str, [1,2,3,4,5,6])),
+		createparent = dict(default=False, required=False),
+		username = dict(default='mapr'),
+		password = dict(default='mapr'),
+		mapr_webserver = dict(required=True),
+		verify_ssl = dict(required=False, default=False)
+	    )
+	)
+	data = mapr_volume(module)
+	module.exit_json(**data)
+
+def mapr_volume(module):
+	data = { "changed": False }
+	info = volume_info(module.params["name"])	
+		
+	if module.params["state"] == "absent":
+		params = { 
+			"name": module.params["name"],
+		}
+		if len(info["volumes"]) > 0:
+			data.update({ "volumes": [volume_remove(**params)] })
+			data.update({"changed": True})			
+
+	if module.params["state"] == "present":
+		params = { 
+			"name": module.params["name"],
+			"path": module.params["path"],
+			"replication": module.params["replication"],
+			"minreplication": module.params["minreplication"],
+			"createparent": module.params["createparent"]
+		}
+		if len(info["volumes"]) > 0:
+			# XXX: could add a comparison of the info object and the params
+			# XXX: to provide a modify capability.
+			data.update(volume_modify_if_necessary(module.params["name"]))
+			data["name"] = module.params["name"]
+			data["volumes"] = info["volumes"]
+		else:
+			data.update({"volumes": [volume_create(**params)]})
+			data.update({"changed": True})
+	return data
+
+def volume_remove(name, **params):
+	params.update({"name": name})
+	return mapr_api_request(module.params["mapr_webserver"], "volume", "remove", module.params["username"], module.params["password"], params=params)
+
+def volume_modify_if_necessary(name, **params):
+	# XXX: Effectively a no-op right now.
+	return volume_info(name)
+
+def volume_create(name, **params):
+	data = { "changed": True }
+	params.update({"name": name})
+	data = mapr_api_request(module.params["mapr_webserver"], "volume", "create", module.params["username"], module.params["password"], params=params)
+	return data
+
+
+def volume_info(name):
+	params = { "name": name }
+	data = mapr_api_request(module.params["mapr_webserver"], "volume", "info", module.params["username"], module.params["password"], params=params)
+	if "errors" in data.keys():
+		if not data["errors"][0]["desc"].endswith("No such volume"):
+			module.fail_json(msg="volume_info: %s" % data)
+	return data
+
+def mapr_api_request(webserver_url, object, action, username, password, params={}):
+	data = { }
+	url = "/".join([webserver_url, "rest", object, action])
+	try:
+		r = requests.get(url, auth=(username,password), verify=module.params["verify_ssl"], params=params)
+	except requests.exceptions.ConnectionError as error:
+		module.fail_json(msg="Connection error: %s" % error, rc=1)
+
+	try:
+		r.raise_for_status()
+	except requests.exceptions.HTTPError as error:
+		module.fail_json(msg="HTTP error contacting '%s' - %s" % (url, error), rc=1)
+
+	try:
+		response = r.json()
+	except ValueError:
+		module.fail_json(msg="Response had no parsable JSON: code: %s, response: %s" % (r.status_code, r.text))
+
+	try:
+		if 'data' in response.keys():
+			data["volumes"] = response["data"]
+		else:
+			data["volumes"] = []
+			data.update(response)
+	except KeyError:
+		module.fail_json(msg="No data key: %s" % response)
+
+	return data
+
+from ansible.module_utils.basic import *
+main()
