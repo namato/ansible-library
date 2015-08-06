@@ -103,7 +103,7 @@ def abort(msg, m):
 
 def finish(tree, property_name, m, changed=False, msg="", hitcount=0):
     if changed:
-        tree.write(m.params['file'], xml_declaration=True, encoding='UTF-8')
+        tree.write(m.params['file'], xml_declaration=True, encoding='UTF-8', pretty_print=True)
     m.exit_json(changed=changed,actions={"name": property_name, "tree": etree.tostring(tree, pretty_print=True), "changed": changed, "state": m.params['state']}, msg=msg, count=hitcount)
 
 def main():
