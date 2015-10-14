@@ -71,6 +71,8 @@ def volume_create(name, **params):
 	data = { "changed": True }
 	params.update({"name": name})
 	data = mapr_api_request(module.params["mapr_webserver"], "volume", "create", module.params["username"], module.params["password"], params=params)
+	if "errors" in data.keys():
+		module.fail_json(msg="Volume create failed: %s" % data["errors"])
 	return data
 
 
