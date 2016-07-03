@@ -25,6 +25,13 @@ description:
   - Create, update or delete properties in hadoop XML properties files.
 version_added: "1.0"
 options:
+  create:
+    description:
+      - Create the file if it does not exist.
+    required: False
+    default: True
+    type: bool
+    choices: [True, False]
   file:
     description:
       - Path to the file to operate on. File must exist ahead of time.
@@ -112,7 +119,7 @@ def main():
             file=dict(required=False, default=None),
             name=dict(required=False, default='/'),
             state=dict(required=False, default='present', choices=['absent', 'present']),
-            create=dict(required=False, default=True, choices=[True,False]),
+            create=dict(required=False, type='bool', default=True, choices=[True,False]),
             value=dict(required=False, default=None)
         ),
         supports_check_mode=False,

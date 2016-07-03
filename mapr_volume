@@ -13,12 +13,12 @@ def main():
 		path = dict(required=False),
 		replication = dict(default="3", choices=map(str, [1,2,3,4,5,6])),
 		minreplication = dict(default="2", choices=map(str, [1,2,3,4,5,6])),
-		createparent = dict(default=False, required=False),
+		createparent = dict(default=False, required=False, type='bool'),
 		localvolumehost = dict(required=False),
 		username = dict(default='mapr'),
 		password = dict(default='mapr'),
 		mapr_webserver = dict(required=True),
-		verify_ssl = dict(required=False, default=False)
+		verify_ssl = dict(required=False, default=False, type='bool')
 	    )
 	)
 	data = mapr_volume(module)
